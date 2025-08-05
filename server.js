@@ -251,6 +251,27 @@ function startGameTimer(roomCode) {
   
   room.timeLeft = 30; // 30 segundos de jogo
   
+  // Definir posições iniciais para cada jogador
+  const players = Object.keys(room.players);
+  players.forEach((playerId, index) => {
+    // Definir posições iniciais em cantos diferentes do grid
+    let position;
+    switch(index % 4) {
+      case 0: position = { x: 0, y: 0 }; break; // Canto superior esquerdo
+      case 1: position = { x: 15, y: 0 }; break; // Canto superior direito
+      case 2: position = { x: 0, y: 15 }; break; // Canto inferior esquerdo
+      case 3: position = { x: 15, y: 15 }; break; // Canto inferior direito
+    }
+    
+    room.players[playerId].position = position;
+    
+    // Notificar todos sobre a posição inicial
+    io.to(roomCode).emit('playerMoved', {
+      playerId: playerId,
+      position: position
+    });
+  });
+  
   // Enviar o grid inicial para todos os jogadores
   io.to(roomCode).emit('gameGridInitialized', { grid: room.grid });
   

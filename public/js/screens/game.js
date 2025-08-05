@@ -141,14 +141,28 @@ export class GameScreen {
         // Obter a posição atual do jogador
         const currentPosition = this.game.getCurrentPlayerPosition();
         
+        // Verificar se a posição atual é válida
+        if (!currentPosition || typeof currentPosition.x !== 'number' || typeof currentPosition.y !== 'number') {
+            console.error('Posição atual inválida:', currentPosition);
+            return;
+        }
+        
         // Calcular nova posição
         const newPosition = {
             x: Math.max(0, Math.min(this.gridSize - 1, currentPosition.x + dx)),
             y: Math.max(0, Math.min(this.gridSize - 1, currentPosition.y + dy))
         };
         
+        // Atualizar localmente para feedback imediato
+        if (this.game.playerId && this.game.players[this.game.playerId]) {
+            this.game.players[this.game.playerId].position = newPosition;
+        }
+        
         // Enviar a nova posição para o servidor
         this.game.socketManager.movePlayer(newPosition);
+        
+        // Forçar uma renderização para mostrar o movimento imediatamente
+        this.render();
     }
     
     // Atualizar o grid com os dados recebidos do servidor
