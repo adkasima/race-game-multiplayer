@@ -33,18 +33,26 @@ export class GameScreen {
             
             switch(e.key) {
                 case 'ArrowUp':
+                case 'w':
+                case 'W':
                     this.keys.up = true;
                     this.movePlayer(0, -1);
                     break;
                 case 'ArrowDown':
+                case 's':
+                case 'S':
                     this.keys.down = true;
                     this.movePlayer(0, 1);
                     break;
                 case 'ArrowLeft':
+                case 'a':
+                case 'A':
                     this.keys.left = true;
                     this.movePlayer(-1, 0);
                     break;
                 case 'ArrowRight':
+                case 'd':
+                case 'D':
                     this.keys.right = true;
                     this.movePlayer(1, 0);
                     break;
@@ -56,15 +64,23 @@ export class GameScreen {
             
             switch(e.key) {
                 case 'ArrowUp':
+                case 'w':
+                case 'W':
                     this.keys.up = false;
                     break;
                 case 'ArrowDown':
+                case 's':
+                case 'S':
                     this.keys.down = false;
                     break;
                 case 'ArrowLeft':
+                case 'a':
+                case 'A':
                     this.keys.left = false;
                     break;
                 case 'ArrowRight':
+                case 'd':
+                case 'D':
                     this.keys.right = false;
                     break;
             }
@@ -169,6 +185,20 @@ export class GameScreen {
         });
     }
     
+    // Atualizar a posição de um jogador
+    updatePlayerPosition(playerId, position) {
+        if (this.game.players[playerId]) {
+            this.game.players[playerId].position = position;
+        }
+    }
+    
+    // Atualizar uma célula do grid
+    updateGridCell(x, y, color) {
+        if (this.grid && this.grid[y] && this.grid[y][x]) {
+            this.grid[y][x].color = color;
+        }
+    }
+    
     // Renderizar o grid e os jogadores
     render() {
         if (!this.grid || !this.grid.length) return;
@@ -184,13 +214,8 @@ export class GameScreen {
                 const cellY = y * this.cellSize;
                 
                 // Desenhar a célula com a cor do jogador ou cinza se não tiver dono
-                if (cell) {
-                    const player = this.game.players[cell];
-                    if (player) {
-                        this.ctx.fillStyle = player.color;
-                    } else {
-                        this.ctx.fillStyle = '#cccccc';
-                    }
+                if (cell && cell.color) {
+                    this.ctx.fillStyle = cell.color;
                 } else {
                     this.ctx.fillStyle = '#eeeeee';
                 }

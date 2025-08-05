@@ -73,6 +73,10 @@ export class SocketManager {
         this.socket.on('gameEnded', (data) => {
             this.game.endGame(data.scores, data.winner);
         });
+        
+        this.socket.on('gameRestarted', () => {
+            this.game.switchScreen('lobby');
+        });
     }
     
     // Métodos para enviar dados ao servidor
@@ -90,5 +94,9 @@ export class SocketManager {
     
     movePlayer(position) {
         this.socket.emit('movePlayer', { position });
+    }
+    
+    restartGame() {
+        this.socket.emit('restartGame');
     }
 }

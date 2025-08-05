@@ -61,6 +61,10 @@ class Game {
             this.switchScreen('menu');
         });
         
+        document.getElementById('restart-game-btn').addEventListener('click', () => {
+            this.socketManager.restartGame();
+        });
+        
         // Configurar entrada de código de sala para maiúsculas
         const roomInput = document.getElementById('room-code-input');
         roomInput.addEventListener('input', () => {

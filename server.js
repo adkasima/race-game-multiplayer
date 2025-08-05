@@ -165,6 +165,33 @@ io.on('connection', (socket) => {
       position: newPosition
     });
   });
+  
+  // Reiniciar o jogo na mesma sala
+  socket.on('restartGame', () => {
+    const roomCode = socket.roomCode;
+    if (!roomCode || !rooms[roomCode]) return;
+    
+    // Verificar se o jogador é o host
+    if (rooms[roomCode].host !== socket.id) {
+      socket.emit('joinError', { message: 'Apenas o host pode reiniciar o jogo!' });
+      return;
+    }
+    
+    // Resetar o estado do jogo
+    rooms[roomCode].gameStarted = false;
+    rooms[roomCode].grid = createEmptyGrid(16, 16);
+    
+    // Resetar o estado dos jogadores
+    for (const playerId in rooms[roomCode].players) {
+      rooms[roomCode].players[playerId].ready = false;
+      rooms[roomCode].players[playerId].score = 0;
+      rooms[roomCode].players[playerId].position = { x: 0, y: 0 };
+    }
+    
+    // Notificar todos os jogadores que o jogo foi reiniciado
+    io.to(roomCode).emit('gameRestarted');
+    console.log(`Jogo reiniciado na sala ${roomCode}`);
+  });
 
   // Desconexão do jogador
   socket.on('disconnect', () => {
