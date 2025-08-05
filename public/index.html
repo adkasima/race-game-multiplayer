@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Jogo de Corrida Multiplayer</title>
+    <title>Color Conquest</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div id="game-container">
         <!-- Tela inicial -->
         <div id="menu-screen" class="screen active">
-            <h1>Corrida Multiplayer</h1>
+            <h1>Color Conquest</h1>
             <div class="menu-buttons">
                 <button id="create-room-btn" class="btn">Criar Sala</button>
                 <div class="join-room">
@@ -32,17 +32,19 @@
                 <ul id="players-container"></ul>
             </div>
             <button id="ready-btn" class="btn">Pronto</button>
+            <button id="back-btn" class="btn">Voltar</button>
             <p id="waiting-message">Aguardando jogadores...</p>
         </div>
 
         <!-- Tela de jogo -->
         <div id="game-screen" class="screen">
-            <div id="countdown"></div>
-            <div id="race-info">
-                <span id="lap-counter">Volta: 0/3</span>
-                <span id="position-display">Posição: 1/1</span>
+            <div id="countdown">30</div>
+            <div id="game-info">
+                <div id="player-scores"></div>
             </div>
-            <canvas id="game-canvas"></canvas>
+            <div id="grid-container">
+                <canvas id="game-canvas"></canvas>
+            </div>
         </div>
 
         <!-- Tela de fim de jogo -->

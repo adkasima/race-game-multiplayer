@@ -8,6 +8,9 @@ const app = express();
 const server = http.createServer(app);
 const io = socketIO(server);
 
+// Porta do servidor
+const PORT = process.env.PORT || 3001;
+
 // Servir arquivos estáticos da pasta public
 app.use(express.static(path.join(__dirname, 'public')));
 
@@ -25,7 +28,10 @@ io.on('connection', (socket) => {
       id: roomCode,
       players: {},
       host: socket.id,
-      gameStarted: false
+      gameStarted: false,
+      grid: createEmptyGrid(16, 16),
+      gameTimer: null,
+      timeLeft: 30
     };
 
     socket.join(roomCode);
@@ -36,11 +42,9 @@ io.on('connection', (socket) => {
       id: socket.id,
       isHost: true,
       ready: false,
-      position: { x: 50, y: 50 },
-      rotation: 0,
+      position: { x: 0, y: 0 },
       color: getRandomColor(),
-      lap: 0,
-      checkpoint: 0
+      score: 0
     };
 
     socket.emit('roomCreated', { roomCode, playerId: socket.id });
@@ -69,11 +73,9 @@ io.on('connection', (socket) => {
       id: socket.id,
       isHost: false,
       ready: false,
-      position: { x: 50, y: 50 + Object.keys(rooms[roomCode].players).length * 30 },
-      rotation: 0,
+      position: { x: 0, y: 0 },
       color: getRandomColor(),
-      lap: 0,
-      checkpoint: 0
+      score: 0
     };
 
     socket.emit('roomJoined', { 
@@ -110,45 +112,57 @@ io.on('connection', (socket) => {
       rooms[roomCode].gameStarted = true;
       io.to(roomCode).emit('gameStart', { countdown: 3 });
       console.log(`Jogo iniciado na sala ${roomCode}`);
+      
+      // Iniciar o temporizador do jogo após a contagem regressiva (3 segundos)
+      setTimeout(() => {
+        startGameTimer(roomCode);
+      }, 3000);
     }
   });
 
   // Atualização da posição do jogador
-  socket.on('updatePosition', (data) => {
+  socket.on('movePlayer', (data) => {
     const roomCode = socket.roomCode;
-    if (!roomCode || !rooms[roomCode] || !rooms[roomCode].players[socket.id]) return;
+    if (!roomCode || !rooms[roomCode] || !rooms[roomCode].players[socket.id] || !rooms[roomCode].gameStarted) return;
 
     const player = rooms[roomCode].players[socket.id];
-    player.position = data.position;
-    player.rotation = data.rotation;
-
-    // Enviar atualização para outros jogadores na sala
+    const newPosition = {
+      x: Math.max(0, Math.min(15, data.position.x)),
+      y: Math.max(0, Math.min(15, data.position.y))
+    };
+    
+    player.position = newPosition;
+    
+    // Pintar a célula com a cor do jogador
+    const cell = rooms[roomCode].grid[newPosition.y][newPosition.x];
+    if (cell.color !== player.color) {
+      // Se a célula já tinha uma cor de outro jogador, diminuir a pontuação desse jogador
+      if (cell.color !== null) {
+        const previousOwner = Object.values(rooms[roomCode].players).find(p => p.color === cell.color);
+        if (previousOwner) {
+          previousOwner.score--;
+        }
+      }
+      
+      // Atualizar a célula com a cor do jogador atual
+      cell.color = player.color;
+      player.score++;
+      
+      // Enviar atualização do grid para todos os jogadores na sala
+      io.to(roomCode).emit('gridUpdated', {
+        x: newPosition.x,
+        y: newPosition.y,
+        color: player.color
+      });
+      
+      // Enviar atualização das pontuações
+      io.to(roomCode).emit('scoresUpdated', getPlayerScores(roomCode));
+    }
+    
+    // Enviar atualização da posição para outros jogadores na sala
     socket.to(roomCode).emit('playerMoved', {
       playerId: socket.id,
-      position: data.position,
-      rotation: data.rotation
-    });
-  });
-
-  // Atualização de checkpoint/volta
-  socket.on('updateProgress', (data) => {
-    const roomCode = socket.roomCode;
-    if (!roomCode || !rooms[roomCode] || !rooms[roomCode].players[socket.id]) return;
-
-    const player = rooms[roomCode].players[socket.id];
-    player.lap = data.lap;
-    player.checkpoint = data.checkpoint;
-
-    // Verificar se o jogador completou a corrida (3 voltas)
-    if (data.lap >= 3) {
-      io.to(roomCode).emit('playerFinished', { playerId: socket.id });
-    }
-
-    // Enviar atualização para outros jogadores
-    socket.to(roomCode).emit('progressUpdate', {
-      playerId: socket.id,
-      lap: data.lap,
-      checkpoint: data.checkpoint
+      position: newPosition
     });
   });
 
@@ -172,14 +186,117 @@ io.on('connection', (socket) => {
             rooms[roomCode].players[newHost].isHost = true;
             io.to(roomCode).emit('newHost', { playerId: newHost });
           } else {
+            // Limpar o temporizador se a sala for fechada
+            if (rooms[roomCode].gameTimer) {
+              clearInterval(rooms[roomCode].gameTimer);
+            }
             delete rooms[roomCode];
           }
+        }
+        
+        // Se o jogo já começou e não há jogadores suficientes, encerrar o jogo
+        if (rooms[roomCode] && rooms[roomCode].gameStarted && Object.keys(rooms[roomCode].players).length < 2) {
+          endGame(roomCode);
         }
       }
     }
     console.log('Jogador desconectado:', socket.id);
   });
 });
+
+// Criar um grid vazio
+function createEmptyGrid(width, height) {
+  const grid = [];
+  for (let y = 0; y < height; y++) {
+    const row = [];
+    for (let x = 0; x < width; x++) {
+      row.push({ color: null });
+    }
+    grid.push(row);
+  }
+  return grid;
+}
+
+// Iniciar o temporizador do jogo
+function startGameTimer(roomCode) {
+  const room = rooms[roomCode];
+  if (!room) return;
+  
+  room.timeLeft = 30; // 30 segundos de jogo
+  
+  // Enviar o grid inicial para todos os jogadores
+  io.to(roomCode).emit('gameGridInitialized', { grid: room.grid });
+  
+  // Atualizar o tempo a cada segundo
+  room.gameTimer = setInterval(() => {
+    room.timeLeft--;
+    
+    // Enviar atualização do tempo para todos os jogadores
+    io.to(roomCode).emit('timeUpdated', { timeLeft: room.timeLeft });
+    
+    // Verificar se o tempo acabou
+    if (room.timeLeft <= 0) {
+      endGame(roomCode);
+    }
+  }, 1000);
+}
+
+// Encerrar o jogo e calcular o vencedor
+function endGame(roomCode) {
+  const room = rooms[roomCode];
+  if (!room) return;
+  
+  // Parar o temporizador
+  if (room.gameTimer) {
+    clearInterval(room.gameTimer);
+    room.gameTimer = null;
+  }
+  
+  // Calcular pontuações finais
+  const scores = getPlayerScores(roomCode);
+  
+  // Determinar o vencedor
+  let winner = null;
+  let maxScore = -1;
+  
+  for (const score of scores) {
+    if (score.score > maxScore) {
+      maxScore = score.score;
+      winner = score.playerId;
+    }
+  }
+  
+  // Enviar resultados para todos os jogadores
+  io.to(roomCode).emit('gameEnded', { 
+    scores: scores,
+    winner: winner
+  });
+  
+  // Resetar o estado do jogo
+  room.gameStarted = false;
+  room.grid = createEmptyGrid(16, 16);
+  
+  // Resetar o estado dos jogadores
+  for (const playerId in room.players) {
+    room.players[playerId].ready = false;
+    room.players[playerId].score = 0;
+    room.players[playerId].position = { x: 0, y: 0 };
+  }
+  
+  console.log(`Jogo encerrado na sala ${roomCode}. Vencedor: ${winner}`);
+}
+
+// Obter as pontuações de todos os jogadores em uma sala
+function getPlayerScores(roomCode) {
+  const room = rooms[roomCode];
+  if (!room) return [];
+  
+  return Object.values(room.players).map(player => ({
+    playerId: player.id,
+    color: player.color,
+    score: player.score
+  }));
+}
 
 // Gerar código de sala aleatório (4 letras)
 function generateRoomCode() {
@@ -195,14 +312,13 @@ function generateRoomCode() {
   return code;
 }
 
-// Gerar cor aleatória para o carro
+// Gerar cor aleatória para o jogador
 function getRandomColor() {
   const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff'];
   return colors[Math.floor(Math.random() * colors.length)];
 }
 
 // Iniciar o servidor
-const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
   console.log(`Servidor rodando na porta ${PORT}`);
 });

@@ -26,6 +26,14 @@ class Game {
         
         // Inicializar o jogo
         this.init();
+        
+        // Verificar se há um elemento de erro, se não, criar um
+        if (!document.getElementById('error-message')) {
+            const errorElement = document.createElement('div');
+            errorElement.id = 'error-message';
+            errorElement.className = 'hidden';
+            document.body.appendChild(errorElement);
+        }
     }
     
     init() {
@@ -84,18 +92,27 @@ class Game {
             this.isReady = false;
             document.getElementById('ready-btn').textContent = 'Pronto';
             document.getElementById('room-code-input').value = '';
+        } else if (screenName === 'lobby') {
+            // Resetar o estado de pronto
+            this.isReady = false;
+            document.getElementById('ready-btn').textContent = 'Pronto';
+            this.lobbyScreen.updatePlayersList();
         }
     }
     
     showError(message) {
         const errorElement = document.getElementById('error-message');
-        errorElement.textContent = message;
-        errorElement.classList.remove('hidden');
-        
-        // Esconder a mensagem após 3 segundos
-        setTimeout(() => {
-            errorElement.classList.add('hidden');
-        }, 3000);
+        if (errorElement) {
+            errorElement.textContent = message;
+            errorElement.classList.remove('hidden');
+            
+            // Esconder a mensagem após 3 segundos
+            setTimeout(() => {
+                errorElement.classList.add('hidden');
+            }, 3000);
+        } else {
+            console.error('Elemento de erro não encontrado:', message);
+        }
     }
     
     // Métodos para gerenciar o estado do jogo
@@ -152,9 +169,25 @@ class Game {
         this.gameScreen.startCountdown(countdown);
     }
     
-    endGame(results) {
-        this.endScreen.showResults(results);
+    endGame(scores, winner) {
+        this.endScreen.showResults(scores, winner);
         this.switchScreen('end');
+    }
+    
+    // Método para obter a cor do jogador atual
+    getCurrentPlayerColor() {
+        if (this.playerId && this.players[this.playerId]) {
+            return this.players[this.playerId].color;
+        }
+        return '#ffffff'; // Cor padrão caso não encontre
+    }
+    
+    // Método para obter a posição do jogador atual
+    getCurrentPlayerPosition() {
+        if (this.playerId && this.players[this.playerId]) {
+            return this.players[this.playerId].position;
+        }
+        return { x: 0, y: 0 }; // Posição padrão
     }
 }
 

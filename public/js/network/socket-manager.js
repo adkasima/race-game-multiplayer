@@ -50,20 +50,28 @@ export class SocketManager {
             this.game.startGame(data.countdown);
         });
         
+        this.socket.on('gameGridInitialized', (data) => {
+            this.game.gameScreen.initializeGrid(data.grid);
+        });
+        
         this.socket.on('playerMoved', (data) => {
-            if (this.game.gameScreen.cars[data.playerId]) {
-                this.game.gameScreen.updateCarPosition(data.playerId, data.position, data.rotation);
-            }
+            this.game.gameScreen.updatePlayerPosition(data.playerId, data.position);
         });
         
-        this.socket.on('progressUpdate', (data) => {
-            if (this.game.gameScreen.cars[data.playerId]) {
-                this.game.gameScreen.updateCarProgress(data.playerId, data.lap, data.checkpoint);
-            }
+        this.socket.on('gridUpdated', (data) => {
+            this.game.gameScreen.updateGridCell(data.x, data.y, data.color);
         });
         
-        this.socket.on('playerFinished', (data) => {
-            this.game.gameScreen.playerFinished(data.playerId);
+        this.socket.on('scoresUpdated', (data) => {
+            this.game.gameScreen.updateScores(data);
+        });
+        
+        this.socket.on('timeUpdated', (data) => {
+            this.game.gameScreen.updateTime(data.timeLeft);
+        });
+        
+        this.socket.on('gameEnded', (data) => {
+            this.game.endGame(data.scores, data.winner);
         });
     }
     
@@ -80,11 +88,7 @@ export class SocketManager {
         this.socket.emit('playerReady', ready);
     }
     
-    updatePosition(position, rotation) {
-        this.socket.emit('updatePosition', { position, rotation });
-    }
-    
-    updateProgress(lap, checkpoint) {
-        this.socket.emit('updateProgress', { lap, checkpoint });
+    movePlayer(position) {
+        this.socket.emit('movePlayer', { position });
     }
 }
