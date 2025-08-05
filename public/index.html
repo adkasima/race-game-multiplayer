@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jogo de Corrida Multiplayer</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="game-container">
+        <!-- Tela inicial -->
+        <div id="menu-screen" class="screen active">
+            <h1>Corrida Multiplayer</h1>
+            <div class="menu-buttons">
+                <button id="create-room-btn" class="btn">Criar Sala</button>
+                <div class="join-room">
+                    <input type="text" id="room-code-input" placeholder="Código da Sala" maxlength="4">
+                    <button id="join-room-btn" class="btn">Entrar</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tela de sala de espera -->
+        <div id="lobby-screen" class="screen">
+            <h2>Sala de Espera</h2>
+            <div id="room-info">
+                <p>Código da Sala: <span id="room-code-display">----</span></p>
+                <p>Compartilhe este código com seus amigos para jogarem juntos!</p>
+            </div>
+            <div id="players-list">
+                <h3>Jogadores:</h3>
+                <ul id="players-container"></ul>
+            </div>
+            <button id="ready-btn" class="btn">Pronto</button>
+            <p id="waiting-message">Aguardando jogadores...</p>
+        </div>
+
+        <!-- Tela de jogo -->
+        <div id="game-screen" class="screen">
+            <div id="countdown"></div>
+            <div id="race-info">
+                <span id="lap-counter">Volta: 0/3</span>
+                <span id="position-display">Posição: 1/1</span>
+            </div>
+            <canvas id="game-canvas"></canvas>
+        </div>
+
+        <!-- Tela de fim de jogo -->
+        <div id="end-screen" class="screen">
+            <h2>Fim de Jogo</h2>
+            <div id="results-container"></div>
+            <button id="back-to-menu-btn" class="btn">Voltar ao Menu</button>
+        </div>
+
+        <!-- Mensagens de erro -->
+        <div id="error-message" class="hidden"></div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="js/game.js" type="module"></script>
+</body>
+</html>
